@@ -8,14 +8,14 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 # If modifying these scopes, delete the file token.json.
-SCOPES = ["https://www.googleapis.com/auth/spreadsheets.readonly"]
+SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 
 # The ID and range of a sample spreadsheet.
 SAMPLE_SPREADSHEET_ID = "1bMZLrLc7Nxw1u7da2L-QaFvPokZuOvOGFG4QgYLsFwo"
 SAMPLE_RANGE_NAME = "Import Data!A2:E"
 
 
-auth = Auth.Token("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")
+auth = Auth.Token("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")
 creds = None
 # The file token.json stores the user's access and refresh tokens, and is
 # created automatically when the authorization flow completes for the first
@@ -47,6 +47,7 @@ contents = repo.get_contents("")
 def print_contents(repo, content):
     if content.type == 'dir':
         sub_contents = repo.get_contents(content.path)
+        print(content.path)
         for item in sub_contents:
             content = repo.get_contents(item.path)
             if isinstance(content, list):
@@ -60,28 +61,26 @@ def print_contents(repo, content):
                         str_line = str(line)
                         remove_import = str_line.removeprefix('import')
                         trimmed_import = remove_import.removesuffix(';')
-                        print(trimmed_import)
+                        print(trimmed_import + " is being imported...")
                         importArray.append(trimmed_import)
                         try:
                             service = build("sheets", "v4", credentials=creds)
+                            values = []
+                            for i in range(len(importArray)):
+                                sublist = []
+                                sublist.append(importArray[i])
+                                sublist.append(content.path)
+                                values.append(sublist)
 
+                            body = {"values": values}
                             # Call the Sheets API
                             sheet = service.spreadsheets()
                             result = (
                             sheet.values()
-                            .get(spreadsheetId=SAMPLE_SPREADSHEET_ID, range=SAMPLE_RANGE_NAME)
+                            .update(spreadsheetId=SAMPLE_SPREADSHEET_ID, range=SAMPLE_RANGE_NAME, valueInputOption="USER_ENTERED", body=body)
                             .execute()
                             )
-                            values = result.get("values", [])
 
-                            if not values:
-                                print("No data found.")
-                                return
-
-                            print("Name, Another Name:")
-                            for row in values:
-                            # Print columns A and E, which correspond to indices 0 and 4.
-                                print(f"{row[0]}, {row[4]}")
                         except HttpError as err:
                             print(err)
         if sub_contents:
